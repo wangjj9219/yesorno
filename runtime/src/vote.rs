@@ -7,9 +7,9 @@ use rstd::vec::Vec;
 #[derive(Encode, Decode, Default, Clone, PartialEq)]
 #[cfg_attr(feature = "std", derive(Debug))]
 pub struct Project {
-    name: Vec<u8>,
     voted_members: u64,
     accumulative_weight: u64,
+    name: Vec<u8>,
 }
 
 pub trait Trait: timestamp::Trait {
@@ -22,7 +22,7 @@ decl_event! (
     {
         AddMember(AccountId, bool),
         AddProject(Vec<u8>),
-        Vote(AccountId, u64, bool),
+        Vote(AccountId, u64, u64),
         CanVote(bool),
     }
 );
@@ -36,7 +36,7 @@ decl_storage! {
         ProjectsCount get(projects_count): u64;
         ProjectsArray get(projects_array): map u64 => Project;
 
-        Votes get(votes): map (u64, T::AccountId) => Option<bool>;
+        Votes get(votes): map (u64, T::AccountId) => Option<u64>;
 
         // config
         Owner get(owner) config(): T::AccountId;
@@ -70,9 +70,9 @@ decl_module! {
             ensure!(Self::owner() == sender, "Sender is not the owner!");
 
             let project = Project {
-                name: name.clone(),
                 voted_members: 0,
                 accumulative_weight: 0,
+                name: name.clone(),
             };
 
             <ProjectsArray<T>>::insert(Self::projects_count(), project);
@@ -82,27 +82,28 @@ decl_module! {
             Ok(())
         }
 
-        pub fn vote(origin, project_id: u64, like: bool) -> Result {
+        pub fn vote(origin, project_id: u64, mark: u64) -> Result {
             let sender = ensure_signed(origin)?;
 
             ensure!(<MemberIsReviewer<T>>::exists(sender.clone()), "Sender must be reviewer or captain!");
             ensure!(<ProjectsArray<T>>::exists(project_id), "Project id must exist!");
             ensure!(Self::can_vote(), "Not in voting period!");
+            ensure!( mark <= 10, "Mark must between 0 ~ 10!");
             ensure!(!<Votes<T>>::exists((project_id, sender.clone())), "Sender has already vote for this project!");
 
             let mut project = Self::projects_array(project_id);
-            let added_weight = match (like, Self::member_is_reviewer(sender.clone()).ok_or("invalid vote")?) {
-                (true, true) => Self::reviewer_weight(),
-                (true, false) => Self::player_weight(),
-                _ => 0,
+            let added_weight = match Self::member_is_reviewer(sender.clone()).ok_or("not the member")? {
+                true => Self::reviewer_weight() * mark,
+                false => Self::player_weight() * mark,
             };
-            project.accumulative_weight = project.accumulative_weight + added_weight;
+
+            project.accumulative_weight += added_weight;
             project.voted_members += 1;
 
-            <Votes<T>>::insert((project_id, sender.clone()), like);
+            <Votes<T>>::insert((project_id, sender.clone()), mark);
             <ProjectsArray<T>>::insert(project_id, project);
             
-            Self::deposit_event(RawEvent::Vote(sender, project_id, like));
+            Self::deposit_event(RawEvent::Vote(sender, project_id, mark));
             Ok(())
         }
 
