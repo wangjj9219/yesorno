@@ -180,12 +180,6 @@ impl balances::Trait for Runtime {
 	type TransferPayment = ();
 }
 
-impl sudo::Trait for Runtime {
-	/// The uniquitous event type.
-	type Event = Event;
-	type Proposal = Call;
-}
-
 impl vote::Trait for Runtime {
 	type Event = Event;
 }
@@ -202,7 +196,6 @@ construct_runtime!(
 		Aura: aura::{Module},
 		Indices: indices,
 		Balances: balances,
-		Sudo: sudo,
 		VoteModule: vote::{Module, Call, Storage, Event<T>, Config<T>},
 	}
 );
