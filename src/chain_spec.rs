@@ -116,10 +116,10 @@ fn testnet_genesis(initial_authorities: Vec<AuthorityId>, endowed_accounts: Vec<
 			key: root_key,
 		}),
 		vote: Some(VoteModuleConfig {
-			owner: account_key("Alice"),
 			can_vote: false,
 			reviewer_weight: 4,
 			player_weight: 1,
+			_genesis_phantom_data: Default::default(),
 		})
 	}
 }

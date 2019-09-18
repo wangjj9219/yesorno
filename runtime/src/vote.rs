@@ -20,6 +20,7 @@ decl_event! (
     pub enum Event<T>
     where AccountId = <T as system::Trait>::AccountId,
     {
+        Initialize(AccountId),
         AddMember(AccountId, bool),
         AddProject(Vec<u8>),
         Vote(AccountId, u64, u64),
@@ -35,11 +36,9 @@ decl_storage! {
 
         ProjectsCount get(projects_count): u64;
         ProjectsArray get(projects_array): map u64 => Project;
-
         Votes get(votes): map (u64, T::AccountId) => Option<u64>;
 
-        // config
-        Owner get(owner) config(): T::AccountId;
+        Owner get(owner): T::AccountId;
         CanVote get(can_vote) config(): bool;
         ReviewerWeight get(reviewer_weight) config(): u64;
         PlayerWeight get(player_weight) config(): u64;
@@ -49,6 +48,17 @@ decl_storage! {
 decl_module! {
     pub struct Module<T: Trait> for enum Call where origin: T::Origin {
         fn deposit_event<T>() = default;
+
+        pub fn init_owner(origin) -> Result {
+            let sender = ensure_signed(origin)?;
+
+            ensure!(!<Owner<T>>::exists(), "Owner already exists!");
+
+            <Owner<T>>::put(sender.clone());
+
+            Self::deposit_event(RawEvent::Initialize(sender));
+            Ok(())
+        }
 
         pub fn register_member(origin, account: T::AccountId, is_reviewer: bool) -> Result {
             let sender = ensure_signed(origin)?;
