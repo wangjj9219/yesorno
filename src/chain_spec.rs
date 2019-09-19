@@ -114,8 +114,9 @@ fn testnet_genesis(initial_authorities: Vec<AuthorityId>, endowed_accounts: Vec<
 		}),
 		vote: Some(VoteModuleConfig {
 			can_vote: false,
-			reviewer_weight: 4,
-			player_weight: 1,
+			reviewer_weight: 43,
+			player_weight: 10,
+			starting_score: 8000,
 			_genesis_phantom_data: Default::default(),
 		})
 	}

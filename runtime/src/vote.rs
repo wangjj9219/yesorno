@@ -42,6 +42,7 @@ decl_storage! {
         CanVote get(can_vote) config(): bool;
         ReviewerWeight get(reviewer_weight) config(): u64;
         PlayerWeight get(player_weight) config(): u64;
+        StartingScore get(starting_score) config(): u64;
     }
 }
 
@@ -81,7 +82,7 @@ decl_module! {
 
             let project = Project {
                 voted_members: 0,
-                accumulative_weight: 0,
+                accumulative_weight: Self::starting_score(),
                 name: name.clone(),
             };
 
@@ -102,12 +103,12 @@ decl_module! {
             ensure!(!<Votes<T>>::exists((project_id, sender.clone())), "Sender has already vote for this project!");
 
             let mut project = Self::projects_array(project_id);
-            let added_weight = match Self::member_is_reviewer(sender.clone()).ok_or("not the member")? {
-                true => Self::reviewer_weight() * mark,
-                false => Self::player_weight() * mark,
+            let deducted_weight = match Self::member_is_reviewer(sender.clone()).ok_or("not the member")? {
+                true => (10 - mark) * Self::reviewer_weight(),
+                false => (10 - mark) * Self::player_weight(),
             };
 
-            project.accumulative_weight += added_weight;
+            project.accumulative_weight = project.accumulative_weight.checked_sub(deducted_weight).ok_or("overflow in calculating token")?;
             project.voted_members += 1;
 
             <Votes<T>>::insert((project_id, sender.clone()), mark);
